@@ -2,6 +2,11 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // Skip middleware for API routes entirely
+  if (request.nextUrl.pathname.startsWith('/api')) {
+    return NextResponse.next()
+  }
+
   // Create response once at the start
   const response = NextResponse.next({
     request: {
@@ -97,6 +102,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // Match admin routes but exclude API routes
     '/admin/:path*',
   ],
 }
