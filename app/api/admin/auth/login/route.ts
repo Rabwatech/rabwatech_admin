@@ -4,6 +4,26 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
+    // Check environment variables first
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.error('Missing Supabase environment variables:', {
+        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      })
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact administrator.' },
+        { status: 500 }
+      )
+    }
+
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable')
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact administrator.' },
+        { status: 500 }
+      )
+    }
+
     const { email, password } = await request.json()
 
     if (!email || !password) {
@@ -22,6 +42,7 @@ export async function POST(request: Request) {
     })
 
     if (authError || !authData.user) {
+      console.error('Auth error:', authError?.message)
       return NextResponse.json(
         { error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' },
         { status: 401 }
@@ -29,14 +50,34 @@ export async function POST(request: Request) {
     }
 
     // Check if user is admin
-    const adminClient = createAdminClient()
+    let adminClient
+    try {
+      adminClient = createAdminClient()
+    } catch (error: any) {
+      console.error('Error creating admin client:', error.message)
+      await supabase.auth.signOut()
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact administrator.' },
+        { status: 500 }
+      )
+    }
+
     const { data: userData, error: userError } = await adminClient
       .from('users')
       .select('id, email, role, is_active')
       .eq('id', authData.user.id)
       .single()
 
-    if (userError || !userData) {
+    if (userError) {
+      console.error('Database error fetching user:', userError)
+      await supabase.auth.signOut()
+      return NextResponse.json(
+        { error: 'المستخدم غير موجود' },
+        { status: 404 }
+      )
+    }
+
+    if (!userData) {
       await supabase.auth.signOut()
       return NextResponse.json(
         { error: 'المستخدم غير موجود' },
@@ -61,10 +102,15 @@ export async function POST(request: Request) {
     }
 
     // Update last login
-    await adminClient
+    const { error: updateError } = await adminClient
       .from('users')
       .update({ last_login: new Date().toISOString() })
       .eq('id', authData.user.id)
+
+    if (updateError) {
+      console.error('Error updating last login:', updateError)
+      // Don't fail the login if last_login update fails
+    }
 
     return NextResponse.json({
       success: true,
@@ -74,10 +120,18 @@ export async function POST(request: Request) {
         role: userData.role,
       },
     })
-  } catch (error) {
-    console.error('Login error:', error)
+  } catch (error: any) {
+    console.error('Login error:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    })
     return NextResponse.json(
-      { error: 'حدث خطأ أثناء تسجيل الدخول' },
+      { 
+        error: 'حدث خطأ أثناء تسجيل الدخول',
+        // Include error message in development for debugging
+        ...(process.env.NODE_ENV === 'development' && { details: error?.message })
+      },
       { status: 500 }
     )
   }
