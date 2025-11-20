@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,7 +22,21 @@ function OfferDetailContent() {
   const [offer, setOffer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const offerId = params.id as string;
-  const defaultTab = searchParams?.get("tab") || "info";
+
+  // Use controlled state for tabs to prevent infinite loops
+  // Initialize from URL param but don't recalculate on every render
+  const [activeTab, setActiveTab] = useState(() => {
+    return searchParams?.get("tab") || "info";
+  });
+
+  // Update activeTab only when searchParams actually changes (but avoid infinite loops)
+  useEffect(() => {
+    const tab = searchParams?.get("tab") || "info";
+    setActiveTab((currentTab) => {
+      // Only update if different to prevent unnecessary re-renders
+      return tab !== currentTab ? tab : currentTab;
+    });
+  }, [searchParams]);
 
   const fetchOffer = async () => {
     if (!offerId) return;
@@ -139,7 +153,11 @@ function OfferDetailContent() {
         </div>
       </div>
 
-      <Tabs defaultValue={defaultTab} className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
         <TabsList>
           <TabsTrigger value="info">معلومات العرض</TabsTrigger>
           <TabsTrigger value="items">عناصر العرض</TabsTrigger>

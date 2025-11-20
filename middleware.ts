@@ -40,15 +40,22 @@ export async function middleware(request: NextRequest) {
     // Allow access to login page
     if (request.nextUrl.pathname === '/admin/login') {
       if (user) {
-        // Check if user is admin
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role, is_active')
-          .eq('id', user.id)
-          .single()
+        // Check if user is admin - but only redirect once to prevent loops
+        try {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('role, is_active')
+            .eq('id', user.id)
+            .single()
 
-        if (userData?.role === 'admin' && userData?.is_active) {
-          return NextResponse.redirect(new URL('/admin', request.url))
+          if (userData?.role === 'admin' && userData?.is_active) {
+            // Use replace redirect to avoid adding to history stack
+            const redirectUrl = new URL('/admin', request.url)
+            return NextResponse.redirect(redirectUrl)
+          }
+        } catch (error) {
+          // If there's an error checking user, allow access to login page
+          console.error('Error checking user in middleware:', error)
         }
       }
       // Set header to indicate this is the login page

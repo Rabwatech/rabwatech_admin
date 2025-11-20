@@ -39,8 +39,8 @@ export default function AdminLoginPage() {
       }
 
       // Redirect to admin dashboard
-      router.push('/admin')
-      router.refresh()
+      // Use replace instead of push to avoid adding to history stack
+      router.replace('/admin')
     } catch (err) {
       setError('حدث خطأ أثناء الاتصال بالخادم')
       setLoading(false)
