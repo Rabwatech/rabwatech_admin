@@ -2,7 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
+  // Create response once at the start
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -19,15 +20,11 @@ export async function middleware(request: NextRequest) {
             return request.cookies.getAll()
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
+            // Update cookies on the existing response instead of creating a new one
+            cookiesToSet.forEach(({ name, value, options }) => {
               request.cookies.set(name, value)
-            )
-            response = NextResponse.next({
-              request,
-            })
-            cookiesToSet.forEach(({ name, value, options }) =>
               response.cookies.set(name, value, options)
-            )
+            })
           },
         },
       }
@@ -39,8 +36,11 @@ export async function middleware(request: NextRequest) {
 
     // Allow access to login page
     if (request.nextUrl.pathname === '/admin/login') {
+      // Don't redirect if already authenticated - let the user stay on login page
+      // This prevents redirect loops when NEXT_PUBLIC_BASE_URL is set
       if (user) {
-        // Check if user is admin - but only redirect once to prevent loops
+        // Only check user status, but don't redirect automatically
+        // Let the login page handle the redirect after successful login
         try {
           const { data: userData } = await supabase
             .from('users')
@@ -48,10 +48,11 @@ export async function middleware(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
+          // If user is admin and active, they can stay on login page
+          // The login form will handle redirect after submission
           if (userData?.role === 'admin' && userData?.is_active) {
-            // Use replace redirect to avoid adding to history stack
-            const redirectUrl = new URL('/admin', request.url)
-            return NextResponse.redirect(redirectUrl)
+            // Don't redirect here - let the login page handle it
+            // This prevents loops when NEXT_PUBLIC_BASE_URL causes redirects
           }
         } catch (error) {
           // If there's an error checking user, allow access to login page
@@ -68,7 +69,13 @@ export async function middleware(request: NextRequest) {
 
     // Require authentication for all other admin routes
     if (!user) {
-      return NextResponse.redirect(new URL('/admin/login', request.url))
+      // Prevent redirect loops by checking if we're already redirecting to login
+      const loginUrl = new URL('/admin/login', request.url)
+      // Don't redirect if already going to login page
+      if (request.nextUrl.pathname !== '/admin/login') {
+        return NextResponse.redirect(loginUrl)
+      }
+      return response
     }
 
     // Check if user is admin
