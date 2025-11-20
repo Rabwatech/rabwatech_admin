@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     // Apply filters
     if (search) {
-      query = query.or(`email.ilike.%${search}%,name.ilike.%${search}%`)
+      query = query.ilike('email', `%${search}%`)
     }
 
     if (role) {
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     await requireAdmin()
 
     const body = await request.json()
-    const { email, password, name, role, is_active } = body
+    const { email, password, role, is_active } = body
 
     if (!email || !password) {
       return NextResponse.json(
@@ -104,7 +104,6 @@ export async function POST(request: NextRequest) {
       .insert({
         id: authData.user.id,
         email: authData.user.email,
-        name: name || null,
         role: role || 'user',
         is_active: is_active !== undefined ? is_active : true,
       })

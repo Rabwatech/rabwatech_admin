@@ -24,7 +24,6 @@ import Link from 'next/link'
 interface User {
   id: string
   email: string
-  name?: string
   role: 'admin' | 'moderator' | 'user'
   is_active: boolean
   last_login?: string
@@ -45,7 +44,6 @@ export default function UserDetailPage() {
   // Form state
   const [formData, setFormData] = useState({
     email: '',
-    name: '',
     role: 'user' as 'admin' | 'moderator' | 'user',
     is_active: true,
   })
@@ -68,7 +66,6 @@ export default function UserDetailPage() {
         setUser(data.user)
         setFormData({
           email: data.user.email || '',
-          name: data.user.name || '',
           role: data.user.role || 'user',
           is_active: data.user.is_active !== undefined ? data.user.is_active : true,
         })
@@ -102,7 +99,6 @@ export default function UserDetailPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: formData.name || null,
           role: formData.role,
           is_active: formData.is_active,
         }),
@@ -141,7 +137,6 @@ export default function UserDetailPage() {
     if (user) {
       setFormData({
         email: user.email || '',
-        name: user.name || '',
         role: user.role || 'user',
         is_active: user.is_active !== undefined ? user.is_active : true,
       })
@@ -263,19 +258,6 @@ export default function UserDetailPage() {
               <Label>البريد الإلكتروني</Label>
               <Input value={formData.email} disabled />
               <p className="text-sm text-muted-foreground">لا يمكن تعديل البريد الإلكتروني</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>الاسم</Label>
-              {isEditing ? (
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="اسم المستخدم"
-                />
-              ) : (
-                <p className="text-sm py-2">{user.name || '-'}</p>
-              )}
             </div>
 
             <div className="space-y-2">

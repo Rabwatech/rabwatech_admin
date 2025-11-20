@@ -41,7 +41,7 @@ export async function PUT(
     await requireAdmin()
 
     const body = await request.json()
-    const { role, is_active, name } = body
+    const { role, is_active } = body
 
     const adminClient = createAdminClient()
 
@@ -49,7 +49,6 @@ export async function PUT(
     const updates: any = {}
     if (role !== undefined) updates.role = role
     if (is_active !== undefined) updates.is_active = is_active
-    if (name !== undefined) updates.name = name
 
     const { data, error } = await adminClient
       .from('users')

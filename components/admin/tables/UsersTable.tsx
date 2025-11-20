@@ -25,7 +25,6 @@ import { ar } from 'date-fns/locale'
 interface User {
   id: string
   email: string
-  name?: string
   role: 'admin' | 'moderator' | 'user'
   is_active: boolean
   last_login?: string
@@ -55,7 +54,6 @@ export function UsersTable({ users, onDelete }: UsersTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead>البريد الإلكتروني</TableHead>
-            <TableHead>الاسم</TableHead>
             <TableHead>الدور</TableHead>
             <TableHead>الحالة</TableHead>
             <TableHead>آخر تسجيل دخول</TableHead>
@@ -66,7 +64,7 @@ export function UsersTable({ users, onDelete }: UsersTableProps) {
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={6} className="text-center text-muted-foreground">
                 لا توجد مستخدمين
               </TableCell>
             </TableRow>
@@ -74,7 +72,6 @@ export function UsersTable({ users, onDelete }: UsersTableProps) {
             users.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.email}</TableCell>
-                <TableCell>{user.name || '-'}</TableCell>
                 <TableCell>
                   <Badge variant={getRoleBadgeVariant(user.role)}>
                     {user.role === 'admin'

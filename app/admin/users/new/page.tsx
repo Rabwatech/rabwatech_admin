@@ -28,7 +28,6 @@ export default function NewUserPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    name: '',
     role: 'user' as 'admin' | 'moderator' | 'user',
     is_active: true,
   })
@@ -66,7 +65,6 @@ export default function NewUserPage() {
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
-          name: formData.name || null,
           role: formData.role,
           is_active: formData.is_active,
         }),
@@ -170,18 +168,6 @@ export default function NewUserPage() {
                 required
                 disabled={loading}
                 minLength={6}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="name">الاسم</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="اسم المستخدم (اختياري)"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                disabled={loading}
               />
             </div>
 
