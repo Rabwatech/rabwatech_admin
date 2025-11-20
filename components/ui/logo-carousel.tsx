@@ -1,0 +1,161 @@
+"use client"
+
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type SVGProps,
+} from "react"
+import { AnimatePresence, motion } from "framer-motion"
+import Image from "next/image"
+
+interface Logo {
+  name: string
+  id: number
+  img?: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  src?: string
+}
+
+interface LogoColumnProps {
+  logos: Logo[]
+  index: number
+  currentTime: number
+}
+
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
+const distributeLogos = (allLogos: Logo[], columnCount: number): Logo[][] => {
+  const shuffled = shuffleArray(allLogos)
+  const columns: Logo[][] = Array.from({ length: columnCount }, () => [])
+
+  shuffled.forEach((logo, index) => {
+    columns[index % columnCount].push(logo)
+  })
+
+  const maxLength = Math.max(...columns.map((col) => col.length))
+  columns.forEach((col) => {
+    while (col.length < maxLength) {
+      col.push(shuffled[Math.floor(Math.random() * shuffled.length)])
+    }
+  })
+
+  return columns
+}
+
+const LogoColumn: React.FC<LogoColumnProps> = React.memo(
+  ({ logos, index, currentTime }) => {
+    const cycleInterval = 2000
+    const columnDelay = index * 200
+    const adjustedTime = (currentTime + columnDelay) % (cycleInterval * logos.length)
+    const currentIndex = Math.floor(adjustedTime / cycleInterval)
+    const currentLogo = logos[currentIndex]
+    const CurrentLogo = useMemo(() => currentLogo.img, [currentLogo])
+
+    return (
+      <motion.div
+        className="relative h-20 w-32 overflow-hidden md:h-32 md:w-64 lg:h-40 lg:w-80"
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          delay: index * 0.1,
+          duration: 0.5,
+          ease: "easeOut",
+        }}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${currentLogo.id}-${currentIndex}`}
+            className="absolute inset-0 flex items-center justify-center"
+            initial={{ y: "10%", opacity: 0, filter: "blur(8px)" }}
+            animate={{
+              y: "0%",
+              opacity: 1,
+              filter: "blur(0px)",
+              transition: {
+                type: "spring",
+                stiffness: 300,
+                damping: 20,
+                mass: 1,
+                bounce: 0.2,
+                duration: 0.5,
+              },
+            }}
+            exit={{
+              y: "-20%",
+              opacity: 0,
+              filter: "blur(6px)",
+              transition: {
+                type: "tween",
+                ease: "easeIn",
+                duration: 0.3,
+              },
+            }}
+          >
+            {currentLogo.src ? (
+              <Image 
+                src={currentLogo.src} 
+                alt={currentLogo.name}
+                width={224}
+                height={224}
+                className="h-28 w-28 max-h-[85%] max-w-[85%] object-contain md:h-44 md:w-44 lg:h-56 lg:w-56"
+                unoptimized
+              />
+            ) : CurrentLogo ? (
+              <CurrentLogo className="h-28 w-28 max-h-[85%] max-w-[85%] object-contain md:h-44 md:w-44 lg:h-56 lg:w-56" />
+            ) : null}
+          </motion.div>
+        </AnimatePresence>
+      </motion.div>
+    )
+  }
+)
+
+LogoColumn.displayName = "LogoColumn"
+
+interface LogoCarouselProps {
+  columnCount?: number
+  logos: Logo[]
+}
+
+export function LogoCarousel({ columnCount = 2, logos }: LogoCarouselProps) {
+  const [logoSets, setLogoSets] = useState<Logo[][]>([])
+  const [currentTime, setCurrentTime] = useState(0)
+
+  const updateTime = useCallback(() => {
+    setCurrentTime((prevTime) => prevTime + 100)
+  }, [])
+
+  useEffect(() => {
+    const intervalId = setInterval(updateTime, 100)
+    return () => clearInterval(intervalId)
+  }, [updateTime])
+
+  useEffect(() => {
+    const distributedLogos = distributeLogos(logos, columnCount)
+    setLogoSets(distributedLogos)
+  }, [logos, columnCount])
+
+  return (
+    <div className="flex space-x-4">
+      {logoSets.map((logos, index) => (
+        <LogoColumn
+          key={index}
+          logos={logos}
+          index={index}
+          currentTime={currentTime}
+        />
+      ))}
+    </div>
+  )
+}
+
+export { LogoColumn }
+
